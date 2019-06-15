@@ -1,4 +1,5 @@
 import boto3
+import botocore
 import click
 
 session = boto3.Session(profile_name='shotty')
@@ -70,9 +71,10 @@ def list_volumes(project):
 #SNAPSHOT
 #LIST OF SNAPSHOT FROM INSTANCES
 @snapshots.command('list')
+@click.option('--all', 'list_all', default=False,is_flag=True, help="List of snapshots")
 @click.option('--project', default=None,
     help="Only volumes for project (tag Project:<name>)")
-def list_snapshots(project):
+def list_snapshots(project, list_all):
     "List EC2 instances"
     instances = filter_instances(project)
 
@@ -85,7 +87,8 @@ def list_snapshots(project):
                     s.state,
                     s.progress,
                     s.start_time.strftime("%c")
-                    )))
+                )))
+                if s.state == 'completed' and not list_all: break
     return
 # CREATE SNAPSHOT
 @instances.command('snapshot', help="Creating Sanpshot for volumes")
@@ -117,7 +120,11 @@ def stop_instances(project):
 
     for i in instances:
         print("Stopping {0}...".format(i.id))
-        i.stop()
+        try:
+            i.stop()
+        except botocore.exceptions.ClientError as e:
+            print(" Couldnot stop {0}.. ".format(i.id) + str(e))
+            continue
     return
 
 @instances.command('start')
@@ -129,7 +136,11 @@ def start_instances(project):
 
     for i in instances:
         print("Starting {0}...".format(i.id))
-        i.start()
+        try:
+            i.start()
+        except botocore.exceptions.ClientError as e:
+            print(" Couldnot start {0}.. ".format(i.id) + str(e))
+            continue
     return
 
 if __name__ == '__main__':
