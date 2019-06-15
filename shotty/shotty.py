@@ -15,8 +15,18 @@ def filter_instances(project):
 
 #Added below three lines to get the commnads
 @click.group()
+def cli():
+    """manage snapshots"""
+
+@cli.group('instances')
 def instances():
     """Commands for Instances"""
+@cli.group('volumes')
+def volumes():
+    """Commands for Volumes"""
+@cli.group('snapshots')
+def snapshots():
+    """Commands for Snapshots"""
 
 @instances.command('list')
 #@click.command() is commented and added @instances.command('list')
@@ -37,6 +47,66 @@ def list_instances(project):
             i.public_dns_name,
             tags.get('Project', '<no project>'))))
     return
+
+#LIST OF VOLUMES FROM INSTANCES
+@volumes.command('list')
+@click.option('--project', default=None,
+    help="Only volumes for project (tag Project:<name>)")
+def list_volumes(project):
+    "List EC2 instances"
+    instances = filter_instances(project)
+
+    for i in instances:
+        for v in i.volumes.all():
+#        tags = {t['Key']:t['Value'] for t in i.tags or [] }
+            print(', '.join((v.id,
+                i.id,
+                v.state,
+                str(v.size)  + "GiB",
+                v.encrypted and "Encrypted" or "Not Encrypted"
+                )))
+    return
+
+#SNAPSHOT
+#LIST OF SNAPSHOT FROM INSTANCES
+@snapshots.command('list')
+@click.option('--project', default=None,
+    help="Only volumes for project (tag Project:<name>)")
+def list_snapshots(project):
+    "List EC2 instances"
+    instances = filter_instances(project)
+
+    for i in instances:
+        for v in i.volumes.all():
+            for s in v.snapshots.all():
+                print(', '.join((s.id,
+                    v.id,
+                    i.id,
+                    s.state,
+                    s.progress,
+                    s.start_time.strftime("%c")
+                    )))
+    return
+# CREATE SNAPSHOT
+@instances.command('snapshot', help="Creating Sanpshot for volumes")
+@click.option('--project', default=None,
+    help="Only volumes for project (tag Project:<name>)")
+def create_snapshots(project):
+    "Create Snapshots instances"
+    instances = filter_instances(project)
+    for i in instances:
+        print("Stopping Instances {0}...".format(i.id))
+        i.stop()
+        i.wait_until_stopped()
+        for v in i.volumes.all():
+            print("Createing Snapshots of {0}...".format(v.id) )
+            v.create_snapshot(Description="Createing Snapshot")
+        print("Starting Instance {0}...".format(i.id))
+        i.start()
+        i.wait_until_running()
+    print("job Done!...")
+    return
+
 
 @instances.command('stop')
 @click.option('--project', default=None,
@@ -64,5 +134,7 @@ def start_instances(project):
 
 if __name__ == '__main__':
 #commented in 2nd section and added instances()
+#instances() commented so that groups can work with cli()
 #    list_instances()
-    instances()
+#    instances()
+    cli()
