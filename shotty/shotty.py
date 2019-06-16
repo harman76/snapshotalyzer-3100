@@ -111,6 +111,37 @@ def create_snapshots(project):
     return
 
 
+filters = {
+	'tag-key': 'mybackups'
+}
+# DELETE SNAPSHOT
+@instances.command('snapdelete', help="Creating Sanpshot for volumes")
+@click.option('--project', default=None,
+    help="Only volumes for project (tag Project:<name>)")
+def delete_snapshots(project):
+    "Create Snapshots instances"
+    instances = filter_instances(project)
+    for i in instances:
+        for v in i.volumes.all():
+            for s in v.snapshots.all():
+                a= s['StartTime']
+                b=a.date()
+                c=datetime.datetime.now().date()
+                d=c-b
+                print(d, s.id)
+#                if d.days>10:#
+#                    instances.delete_snapshot(SnapshotId=s.id)
+#                else:
+#                    print(" Couldnot stop {0}.. ".format(i.id) + str(e))
+#                    print("skipping this snapshot")
+#                    continue
+#    snapshots = instances.get_all_snapshots()
+#    for snapshot in snapshots:
+#
+    print("job Done!...")
+    return
+
+
 @instances.command('stop')
 @click.option('--project', default=None,
     help="Only instance for project")
